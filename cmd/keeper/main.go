@@ -44,7 +44,20 @@ func init() {
 func main() {
 	input := getInput()
 	var payload Payload
-	rlp.DecodeBytes(input, &payload)
+	if err := rlp.DecodeBytes(input, &payload); err != nil {
+		fmt.Fprintf(os.Stderr, "failed to decode payload: %v\n", err)
+		os.Exit(14)
+	}
+	if payload.Block == nil {
+		fmt.Fprintf(os.Stderr, "payload: block is nil\n")
+		os.Exit(15)
+	}
+	if payload.Witness == nil {
+		fmt.Fprintf(os.Stderr, "payload: witness is nil\n")
+		os.Exit(16)
+	}
+	fmt.Fprintf(os.Stderr, "payload: chain_id=%d block=%d txs=%d\n",
+		payload.ChainID, payload.Block.NumberU64(), len(payload.Block.Transactions()))
 
 	chainConfig, err := getChainConfig(payload.ChainID)
 	if err != nil {
@@ -52,6 +65,16 @@ func main() {
 		os.Exit(13)
 	}
 	vmConfig := vm.Config{}
+
+	// Pre-recover all transaction senders to populate the cache.
+	// Use types.Sender which handles all signer variants correctly
+	// (modern, EIP-155, pre-EIP-155 legacy). The individual Ecrecover calls
+	// already use secp256k1 syscall + Shamir + uint256_mul optimizations.
+	txs := payload.Block.Transactions()
+	signer := types.MakeSigner(chainConfig, payload.Block.Number(), payload.Block.Time())
+	for _, tx := range txs {
+		types.Sender(signer, tx)
+	}
 
 	crossStateRoot, crossReceiptRoot, err := core.ExecuteStateless(context.Background(), chainConfig, vmConfig, payload.Block, payload.Witness)
 	if err != nil {

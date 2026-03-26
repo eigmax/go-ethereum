@@ -127,16 +127,19 @@ func (c *gfP2) Exp(a *gfP2, power *big.Int, pool *bnPool) *gfP2 {
 // See "Multiplication and Squaring in Pairing-Friendly Fields",
 // http://eprint.iacr.org/2006/471.pdf
 func (e *gfP2) Mul(a, b *gfP2, pool *bnPool) *gfP2 {
-	tx := pool.Get().Mul(a.x, b.y)
-	t := pool.Get().Mul(b.x, a.y)
+	// (xi+y)(x'i+y') = (xy'+x'y)i + (yy'-xx')
+	tx := pool.Get().Set(fieldMul(a.x, b.y))
+	t := pool.Get().Set(fieldMul(b.x, a.y))
 	tx.Add(tx, t)
 	tx.Mod(tx, P)
 
-	ty := pool.Get().Mul(a.y, b.y)
-	t.Mul(a.x, b.x)
+	ty := pool.Get().Set(fieldMul(a.y, b.y))
+	t.Set(fieldMul(a.x, b.x))
 	ty.Sub(ty, t)
-	e.y.Mod(ty, P)
+	ty.Mod(ty, P)
+
 	e.x.Set(tx)
+	e.y.Set(ty)
 
 	pool.Put(tx)
 	pool.Put(ty)
@@ -146,21 +149,21 @@ func (e *gfP2) Mul(a, b *gfP2, pool *bnPool) *gfP2 {
 }
 
 func (e *gfP2) MulScalar(a *gfP2, b *big.Int) *gfP2 {
-	e.x.Mul(a.x, b)
-	e.y.Mul(a.y, b)
+	e.x.Set(fieldMul(a.x, b))
+	e.y.Set(fieldMul(a.y, b))
 	return e
 }
 
 // MulXi sets e=ξa where ξ=i+9 and then returns e.
 func (e *gfP2) MulXi(a *gfP2, pool *bnPool) *gfP2 {
-	// (xi+y)(i+3) = (9x+y)i+(9y-x)
-	tx := pool.Get().Lsh(a.x, 3)
-	tx.Add(tx, a.x)
-	tx.Add(tx, a.y)
+	// (xi+y)(i+9) = (9x+y)i+(9y-x)
+	// Use fieldMul for 9*x and 9*y to keep values mod P (< 256 bits).
+	nine := big.NewInt(9)
+	nx := fieldMul(a.x, nine) // (9*x) mod P
+	ny := fieldMul(a.y, nine) // (9*y) mod P
 
-	ty := pool.Get().Lsh(a.y, 3)
-	ty.Add(ty, a.y)
-	ty.Sub(ty, a.x)
+	tx := pool.Get().Add(nx, a.y) // < 2P, fits 256 bits
+	ty := pool.Get().Sub(ny, a.x) // could be negative, |v| < P
 
 	e.x.Set(tx)
 	e.y.Set(ty)
@@ -172,14 +175,13 @@ func (e *gfP2) MulXi(a *gfP2, pool *bnPool) *gfP2 {
 }
 
 func (e *gfP2) Square(a *gfP2, pool *bnPool) *gfP2 {
-	// Complex squaring algorithm:
-	// (xi+b)² = (x+y)(y-x) + 2*i*x*y
+	// (xi+y)² = (x+y)(y-x) + 2xyi
 	t1 := pool.Get().Sub(a.y, a.x)
 	t2 := pool.Get().Add(a.x, a.y)
-	ty := pool.Get().Mul(t1, t2)
+	ty := pool.Get().Set(fieldMul(t1, t2))
 	ty.Mod(ty, P)
 
-	t1.Mul(a.x, a.y)
+	t1.Set(fieldMul(a.x, a.y))
 	t1.Lsh(t1, 1)
 
 	e.x.Mod(t1, P)
@@ -194,21 +196,20 @@ func (e *gfP2) Square(a *gfP2, pool *bnPool) *gfP2 {
 
 func (e *gfP2) Invert(a *gfP2, pool *bnPool) *gfP2 {
 	// See "Implementing cryptographic pairings", M. Scott, section 3.2.
-	// ftp://136.206.11.249/pub/crypto/pairings.pdf
 	t := pool.Get()
-	t.Mul(a.y, a.y)
+	t.Set(fieldMul(a.y, a.y))
 	t2 := pool.Get()
-	t2.Mul(a.x, a.x)
+	t2.Set(fieldMul(a.x, a.x))
 	t.Add(t, t2)
 
 	inv := pool.Get()
-	inv.ModInverse(t, P)
+	inv.Set(fieldModInverse(t))
 
 	e.x.Neg(a.x)
-	e.x.Mul(e.x, inv)
+	e.x.Set(fieldMul(e.x, inv))
 	e.x.Mod(e.x, P)
 
-	e.y.Mul(a.y, inv)
+	e.y.Set(fieldMul(a.y, inv))
 	e.y.Mod(e.y, P)
 
 	pool.Put(t)

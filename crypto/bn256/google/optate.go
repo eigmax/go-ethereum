@@ -4,6 +4,11 @@
 
 package bn256
 
+import (
+	"fmt"
+	"os"
+)
+
 func lineFunctionAdd(r, p *twistPoint, q *curvePoint, r2 *gfP2, pool *bnPool) (a, b, c *gfP2, rOut *twistPoint) {
 	// See the mixed addition algorithm from "Faster Computation of the
 	// Tate Pairing", http://arxiv.org/pdf/0904.0854v3.pdf
@@ -190,6 +195,7 @@ var sixuPlus2NAF = []int8{0, 0, 0, 1, 0, 1, 0, -1, 0, 0, 1, -1, 0, 0, 1, 0,
 // miller implements the Miller loop for calculating the Optimal Ate pairing.
 // See algorithm 1 from http://cryptojedi.org/papers/dclxvi-20100714.pdf
 func miller(q *twistPoint, p *curvePoint, pool *bnPool) *gfP12 {
+	fmt.Fprintf(os.Stderr, "miller: start\n")
 	ret := newGFp12(pool)
 	ret.SetOne()
 
@@ -211,6 +217,9 @@ func miller(q *twistPoint, p *curvePoint, pool *bnPool) *gfP12 {
 	r2.Square(aAffine.y, pool)
 
 	for i := len(sixuPlus2NAF) - 1; i > 0; i-- {
+		if i%10 == 0 {
+			fmt.Fprintf(os.Stderr, "miller: iter %d/%d\n", len(sixuPlus2NAF)-1-i, len(sixuPlus2NAF)-1)
+		}
 		a, b, c, newR := lineFunctionDouble(r, bAffine, pool)
 		if i != len(sixuPlus2NAF)-1 {
 			ret.Square(ret, pool)
@@ -306,26 +315,33 @@ func miller(q *twistPoint, p *curvePoint, pool *bnPool) *gfP12 {
 // GF(p¹²) to obtain an element of GT (steps 13-15 of algorithm 1 from
 // http://cryptojedi.org/papers/dclxvi-20100714.pdf)
 func finalExponentiation(in *gfP12, pool *bnPool) *gfP12 {
+	fmt.Fprintf(os.Stderr, "finalExp: start\n")
 	t1 := newGFp12(pool)
 
-	// This is the p^6-Frobenius
 	t1.x.Negative(in.x)
 	t1.y.Set(in.y)
 
+	fmt.Fprintf(os.Stderr, "finalExp: Invert\n")
 	inv := newGFp12(pool)
 	inv.Invert(in, pool)
+	fmt.Fprintf(os.Stderr, "finalExp: Mul1\n")
 	t1.Mul(t1, inv, pool)
 
+	fmt.Fprintf(os.Stderr, "finalExp: FrobeniusP2\n")
 	t2 := newGFp12(pool).FrobeniusP2(t1, pool)
 	t1.Mul(t1, t2, pool)
 
+	fmt.Fprintf(os.Stderr, "finalExp: Frobenius ops\n")
 	fp := newGFp12(pool).Frobenius(t1, pool)
 	fp2 := newGFp12(pool).FrobeniusP2(t1, pool)
 	fp3 := newGFp12(pool).Frobenius(fp2, pool)
 
 	fu, fu2, fu3 := newGFp12(pool), newGFp12(pool), newGFp12(pool)
+	fmt.Fprintf(os.Stderr, "finalExp: Exp1 (u bits=%d)\n", u.BitLen())
 	fu.Exp(t1, u, pool)
+	fmt.Fprintf(os.Stderr, "finalExp: Exp2\n")
 	fu2.Exp(fu, u, pool)
+	fmt.Fprintf(os.Stderr, "finalExp: Exp3\n")
 	fu3.Exp(fu2, u, pool)
 
 	y3 := newGFp12(pool).Frobenius(fu, pool)

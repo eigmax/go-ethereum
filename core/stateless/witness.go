@@ -124,5 +124,18 @@ func (w *Witness) Copy() *Witness {
 // Note, this method will panic in case of a bad witness (but RLP decoding will
 // sanitize it and fail before that).
 func (w *Witness) Root() common.Hash {
-	return w.Headers[0].Root
+	// The parent header (direct parent of the block being executed) has the
+	// highest block number among the witness headers. Its state root is the
+	// pre-execution state root needed for stateless execution.
+	//
+	// When the witness contains multiple headers (for BLOCKHASH opcode support),
+	// Headers[0] may NOT be the direct parent — the API may return headers in
+	// ascending order by block number.
+	best := w.Headers[0]
+	for _, h := range w.Headers[1:] {
+		if h.Number.Cmp(best.Number) > 0 {
+			best = h
+		}
+	}
+	return best.Root
 }

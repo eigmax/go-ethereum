@@ -45,3 +45,5 @@ require (
 )
 
 replace github.com/ethereum/go-ethereum => ../../
+
+replace github.com/ProjectZKM/Ziren/crates/go-runtime/zkvm_runtime => /data/stephen/Ziren/crates/go-runtime/zkvm_runtime

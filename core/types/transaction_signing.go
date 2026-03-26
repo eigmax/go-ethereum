@@ -156,6 +156,13 @@ func Sender(signer Signer, tx *Transaction) (common.Address, error) {
 	return addr, nil
 }
 
+// CacheSender stores a pre-computed sender address in the transaction's cache.
+// This allows bypassing Ecrecover when the sender is already known (e.g. from
+// batch recovery).
+func CacheSender(signer Signer, tx *Transaction, addr common.Address) {
+	tx.from.Store(&sigCache{signer: signer, from: addr})
+}
+
 // Signer encapsulates transaction signature handling. The name of this type is slightly
 // misleading because Signers don't actually sign, they're just for validating and
 // processing of signatures.

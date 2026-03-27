@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"math/big"
-	"os"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/misc"
@@ -97,7 +96,6 @@ func (p *StateProcessor) Process(ctx context.Context, block *types.Block, stated
 
 	// Iterate over and process the individual transactions
 	for i, tx := range block.Transactions() {
-		fmt.Fprintf(os.Stderr, "tx: %d/%d gas_pool_used=%d\n", i, len(block.Transactions()), gp.Used())
 		msg, err := TransactionToMessage(tx, signer, header.BaseFee)
 		if err != nil {
 			return nil, fmt.Errorf("could not apply tx %d [%v]: %w", i, tx.Hash().Hex(), err)

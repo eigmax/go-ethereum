@@ -5,9 +5,7 @@
 package bn256
 
 import (
-	"fmt"
 	"math/big"
-	"os"
 )
 
 // twistPoint implements the elliptic curve y²=x³+3/ξ over GF(p²). Points are
@@ -71,27 +69,19 @@ func (c *twistPoint) Set(a *twistPoint) {
 
 // IsOnCurve returns true iff c is on the curve and is in the correct subgroup, where c must be in affine form.
 func (c *twistPoint) IsOnCurve() bool {
-	fmt.Fprintf(os.Stderr, "IsOnCurve: start\n")
 	pool := new(bnPool)
-	fmt.Fprintf(os.Stderr, "IsOnCurve: Square(y)\n")
 	yy := newGFp2(pool).Square(c.y, pool)
-	fmt.Fprintf(os.Stderr, "IsOnCurve: Square(x)\n")
 	xxx := newGFp2(pool).Square(c.x, pool)
-	fmt.Fprintf(os.Stderr, "IsOnCurve: Mul(xxx,x)\n")
 	xxx.Mul(xxx, c.x, pool)
-	fmt.Fprintf(os.Stderr, "IsOnCurve: Sub\n")
 	yy.Sub(yy, xxx)
 	yy.Sub(yy, twistB)
 	yy.Minimal()
-	fmt.Fprintf(os.Stderr, "IsOnCurve: curve check done\n")
 
 	if yy.x.Sign() != 0 || yy.y.Sign() != 0 {
 		return false
 	}
-	fmt.Fprintf(os.Stderr, "IsOnCurve: subgroup check start\n")
 	cneg := newTwistPoint(pool)
 	cneg.Mul(c, Order, pool)
-	fmt.Fprintf(os.Stderr, "IsOnCurve: subgroup check done\n")
 	return cneg.z.IsZero()
 }
 
@@ -222,9 +212,6 @@ func (c *twistPoint) Mul(a *twistPoint, scalar *big.Int, pool *bnPool) *twistPoi
 
 	bits := scalar.BitLen()
 	for i := bits; i >= 0; i-- {
-		if i%50 == 0 {
-			fmt.Fprintf(os.Stderr, "twistMul: %d/%d\n", bits-i, bits)
-		}
 		t.Double(sum, pool)
 		if scalar.Bit(i) != 0 {
 			sum.Add(t, a, pool)

@@ -21,7 +21,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"os"
 	"maps"
 	"math"
 	"math/big"
@@ -279,9 +278,6 @@ func RunPrecompiledContract(stateDB StateDB, p PrecompiledContract, address comm
 		stateDB.Exist(address)
 	}
 	output, err := p.Run(input)
-	if gasCost > 10000 {
-		fmt.Fprintf(os.Stderr, "precompile: %s gas=%d inputLen=%d err=%v\n", p.Name(), gasCost, len(input), err)
-	}
 	return output, suppliedGas, err
 }
 
@@ -803,24 +799,19 @@ func runBn256Pairing(input []byte) ([]byte, error) {
 		ts []*bn256.G2
 	)
 	for i := 0; i < len(input); i += 192 {
-		fmt.Fprintf(os.Stderr, "pairing: newCurvePoint pair %d\n", i/192)
 		c, err := newCurvePoint(input[i : i+64])
 		if err != nil {
 			return nil, err
 		}
-		fmt.Fprintf(os.Stderr, "pairing: newTwistPoint pair %d\n", i/192)
 		t, err := newTwistPoint(input[i+64 : i+192])
 		if err != nil {
 			return nil, err
 		}
-		fmt.Fprintf(os.Stderr, "pairing: pair %d done\n", i/192)
 		cs = append(cs, c)
 		ts = append(ts, t)
 	}
-	fmt.Fprintf(os.Stderr, "pairing: PairingCheck start (%d pairs)\n", len(cs))
 	// Execute the pairing checks and return the results
 	result := bn256.PairingCheck(cs, ts)
-	fmt.Fprintf(os.Stderr, "pairing: PairingCheck done result=%v\n", result)
 	if result {
 		return true32Byte, nil
 	}

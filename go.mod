@@ -97,7 +97,7 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.7.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/internal v1.3.0 // indirect
 	github.com/DataDog/zstd v1.4.5 // indirect
-	github.com/ProjectZKM/Ziren/crates/go-runtime/zkvm_runtime v0.0.0-20251001021608-1fe7b43fc4d6
+	github.com/ProjectZKM/Ziren/crates/go-runtime/zkvm_runtime v0.0.0-20260327191049-c16fd20a39b2
 	github.com/StackExchange/wmi v1.2.1 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.13.13 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.43 // indirect
@@ -172,6 +172,7 @@ tool (
 	google.golang.org/protobuf/cmd/protoc-gen-go
 )
 
-replace github.com/ProjectZKM/Ziren/crates/go-runtime/zkvm_runtime => /data/stephen/Ziren/crates/go-runtime/zkvm_runtime
+// For local development, uncomment the line below and comment out the remote replace:
+// replace github.com/ProjectZKM/Ziren/crates/go-runtime/zkvm_runtime => /path/to/Ziren/crates/go-runtime/zkvm_runtime
 
-replace github.com/consensys/gnark-crypto v0.18.1 => /data/stephen/gnark-crypto
+// replace github.com/consensys/gnark-crypto v0.18.1 => /data/stephen/gnark-crypto

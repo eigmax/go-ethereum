@@ -32,21 +32,12 @@ import (
 
 // secp256k1 curve constants (prefixed to avoid collision with crypto.go)
 var (
-	zirenSecp256k1P, _     = new(big.Int).SetString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F", 16)
-	zirenSecp256k1N, _     = new(big.Int).SetString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141", 16)
-	zirenSecp256k1halfN    = new(big.Int).Div(zirenSecp256k1N, big.NewInt(2))
-	zirenSecp256k1Gx, _    = new(big.Int).SetString("79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798", 16)
-	zirenSecp256k1Gy, _    = new(big.Int).SetString("483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8", 16)
+	zirenSecp256k1P, _  = new(big.Int).SetString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F", 16)
+	zirenSecp256k1N, _  = new(big.Int).SetString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141", 16)
+	zirenSecp256k1halfN = new(big.Int).Div(zirenSecp256k1N, big.NewInt(2))
+	zirenSecp256k1Gx, _ = new(big.Int).SetString("79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798", 16)
+	zirenSecp256k1Gy, _ = new(big.Int).SetString("483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8", 16)
 )
-
-func init() {
-	// Fix package-level variable initialization order: crypto.go initializes
-	// secp256k1N = S256().Params().N before zirenSecp256k1N is ready (Go
-	// processes crypto.go before signature_ziren.go alphabetically).
-	// Re-assign here to ensure correct values.
-	secp256k1N = zirenSecp256k1N
-	secp256k1halfN = new(big.Int).Div(secp256k1N, big.NewInt(2))
-}
 
 // ---------------------------------------------------------------------------
 // uint256 modular arithmetic using SyscallUint256Mul

@@ -44,11 +44,25 @@ const RecoveryIDOffset = 64
 const DigestLength = 32
 
 var (
-	secp256k1N     = S256().Params().N
-	secp256k1halfN = new(big.Int).Div(secp256k1N, big.NewInt(2))
+	secp256k1N     *big.Int
+	secp256k1halfN *big.Int
 )
 
 var errInvalidPubkey = errors.New("invalid secp256k1 public key")
+
+func init() {
+	initSecp256k1Globals()
+}
+
+// initSecp256k1Globals initializes the shared secp256k1 constants after package vars are ready.
+func initSecp256k1Globals() {
+	n := S256().Params().N
+	if n == nil {
+		panic("crypto: S256().Params().N is nil during package initialization")
+	}
+	secp256k1N = n
+	secp256k1halfN = new(big.Int).Div(new(big.Int).Set(n), big.NewInt(2))
+}
 
 // EllipticCurve contains curve operations.
 type EllipticCurve interface {

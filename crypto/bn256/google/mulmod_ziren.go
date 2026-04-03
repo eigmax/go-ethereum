@@ -15,22 +15,14 @@ import (
 var p_u32 [8]uint32
 
 func init() {
-	bigIntToU32LE(P, &p_u32)
+	encodeBigIntToU32LE(P, &p_u32)
 }
 
 // --- Conversion helpers ---
 
-func bigIntToU32LE(v *big.Int, out *[8]uint32) {
-	// Must ensure value is non-negative and fits in 256 bits (32 bytes).
-	// Values in [0, 2^256) are fine — the executor's % modulus handles > P.
-	// Negative or > 256 bit values: reduce using SyscallUint256Mul(v, 1, P).
-	val := v
-	if v.Sign() < 0 || v.BitLen() > 256 {
-		// Use uint256_mul(v mod 2^256, 1, P) to reduce.
-		// For negative: first make non-negative via Go Mod (guaranteed correct).
-		val = new(big.Int).Mod(v, P) // Go's Mod always returns [0, P)
-	}
-	b := val.Bytes()
+// encodeBigIntToU32LE encodes a non-negative integer into 8 little-endian uint32 limbs.
+func encodeBigIntToU32LE(v *big.Int, out *[8]uint32) {
+	b := v.Bytes()
 	var lebuf [32]byte
 	for i := 0; i < len(b) && i < 32; i++ {
 		lebuf[i] = b[len(b)-1-i]
@@ -41,6 +33,11 @@ func bigIntToU32LE(v *big.Int, out *[8]uint32) {
 			uint32(lebuf[i*4+2])<<16 |
 			uint32(lebuf[i*4+3])<<24
 	}
+}
+
+// bigIntToU32LE canonicalizes BN254 inputs to [0, P) before limb encoding.
+func bigIntToU32LE(v *big.Int, out *[8]uint32) {
+	encodeBigIntToU32LE(canonicalizeBN254Element(v), out)
 }
 
 func u32LEtoBigInt(v *[8]uint32) *big.Int {
@@ -55,6 +52,14 @@ func u32LEtoBigInt(v *[8]uint32) *big.Int {
 		buf[i], buf[j] = buf[j], buf[i]
 	}
 	return new(big.Int).SetBytes(buf[:])
+}
+
+// canonicalizeBN254Element returns the canonical field representative in [0, P).
+func canonicalizeBN254Element(v *big.Int) *big.Int {
+	if v.Sign() >= 0 && v.Cmp(P) < 0 {
+		return v
+	}
+	return new(big.Int).Mod(v, P)
 }
 
 // --- Field operations using BN254 Fp syscalls ---
